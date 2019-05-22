@@ -7,7 +7,7 @@ pipeline {
       skipStagesAfterUnstable()
    }
    stages {
-        stage('build') {
+        stage('build GitHub') {
             // agent - uses jenkins master 
             steps{
                 echo 'Everybody says Hi'
