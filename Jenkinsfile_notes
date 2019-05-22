@@ -1,0 +1,99 @@
+# runs in backgroud '-d'
+#   docker run -d -p 8080:8080 -p 50000:50000 -v $(pwd)/jenkins_home:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock --network=host jenkins/jenkins 
+
+# runs in foreground
+sudo docker run -p 8080:8080 -p 50000:50000 -v $(pwd)/jenkins_home:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock --network=host jenkinsci/blueocean
+
+
+exit 0
+
+# note security key to start is retrieved with the OS file explorer. We've not the permissions to see it in the image
+# once started the key is deleted
+..... /jenksins_home/secrets/
+
+
+# change permission of volume passed in to container
+sudo chmod 666 /var/run/docker.sock
+
+
+# pipeline example 1 - declaritive
+/////////////////////////////////////
+pipeline {
+   agent none
+   stages {
+        stage('build') {
+            // agent - uses jenkins master 
+            steps{
+                echo 'Everybody says Hi'
+            }
+        }
+        
+        stage('maven example') {
+            agent {
+                docker {
+                    image 'maven:3.3.3'
+                }
+            }
+            steps{
+                retry(3) {                  // on fail
+                    sh 'mvn --version'
+                }
+                timeout(time: 3, unit: 'MINUTES') {
+                    sh 'mvn --version'   
+                }
+            }
+        }
+        
+        stage('python example') {
+            agent {
+                docker {
+                    image 'python'
+                }
+            }
+            steps{
+                sh 'python --version'
+            }
+        }  
+        
+        stage('node example') {
+            agent {
+                docker {
+                    image 'node'
+                }
+            }
+            steps{
+                sh 'node --version'
+            }
+        }  
+   }
+
+}
+
+////////////////////////////////////////////////
+pipeline {
+    agent {
+        docker {
+            image 'node:6-alpine'
+            args '-p 3000:3000 -p 5000:5000'
+        }
+    }
+    environment {
+        CI = 'true'
+    }
+    stages {
+        expression {
+            LAST=='myvalue'
+            currentBuid.result == "SUCCESS" / "FAILURE" / "UNSTABLE"
+        }
+        stage('Build') {
+            steps {
+                sh 'npm install'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh './jenkins/scripts/test.sh'
+            }
+        }
+    }
+}
